@@ -1,0 +1,121 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 --query 1\
+create index on batting(h);\
+explain analyze SELECT min(H)\
+FROM batting;\
+\
+--query 3\
+create index on batting(masterid);\
+explain analyze SELECT master.*\
+FROM master JOIN batting USING (masterID);\
+\
+-- query 4\
+create index on pitching(masterid);\
+create index on master(masterid);\
+explain analyze SELECT *\
+FROM master m\
+WHERE EXISTS \
+  (SELECT *\
+   FROM pitching\
+   WHERE m.masterID = pitching.masterID);\
+   \
+-- query 5\
+CREATE INDEX ON master(birthState,birthCountry);\
+EXPLAIN ANALYZE SELECT DISTINCT birthState, birthCountry\
+FROM master;\
+\
+--query 6\
+CREATE INDEX ON master(birthState,birthCountry);\
+EXPLAIN ANALYZE SELECT birthState, birthCountry\
+FROM master;\
+\
+--query 7\
+explain analyze SELECT h\
+FROM batting\
+UNION \
+SELECT g\
+FROM teams;\
+   \
+explain analyze select distinct *\
+from (SELECT h\
+FROM batting\
+UNION all\
+SELECT g\
+FROM teams) as a;\
+\
+--query 8\
+create index on batting(teamid,yearid,lgid);\
+create index on teams(lgid);\
+\
+EXPLAIN ANALYZE SELECT DISTINCT master.nameFirst as "First Name", master.nameLast as "Last Name"\
+FROM\
+    (SELECT b.masterID AS ID, b.yearID AS year\
+     FROM batting b, teams t\
+     WHERE name LIKE '%Montreal Expos%'\
+       AND b.teamID = t.teamID\
+       AND b.yearID = t.yearID\
+       AND t.lgID = b.lgID) y1,\
+    (SELECT b.masterID AS ID, b.yearID AS year\
+     FROM batting b, teams t\
+     WHERE name LIKE '%Montreal Expos%'\
+       AND b.teamID = t.teamID\
+       AND b.yearID = t.yearID\
+       AND t.lgID = b.lgID) y2,\
+    (SELECT b.masterID AS ID, b.yearID AS year\
+     FROM batting b, teams t\
+     WHERE name LIKE '%Montreal Expos%'\
+       AND b.teamID = t.teamID\
+       AND b.yearID = t.yearID\
+       AND t.lgID = b.lgID) y3,\
+    master\
+WHERE y1.id = y2.id \
+  AND y2.id = y3.id\
+  AND y1.year + 1 = y2.year\
+  AND y2.year + 1 = y3.year\
+  AND y3.id = master.masterID\
+ORDER BY master.nameLast, master.nameFirst;\
+   \
+ \
+ --query 9\
+create index num_one on appearances(masterID, teamID,lgID, G_1b, G_2b, G_3b);\
+create index num_two on master(nameLast, nameFirst);\
+\
+EXPLAIN ANALYZE SELECT DISTINCT jeter.masterID, jeterT.masterID, jeterTY.masterID, jeterTT.masterID\
+FROM master m,\
+    appearances jeter,\
+    appearances jeterT,\
+    appearances jeterTY,\
+    appearances jeterTT\
+WHERE m.masterID = jeter.masterID\
+  AND m.nameLast = 'Jeter'\
+  AND m.nameFirst = 'Derek'\
+  AND jeter.teamID = jeterT.teamID\
+  AND jeter.yearID = jeterT.yearID\
+  AND jeter.lgID = jeterT.lgID\
+  AND jeter.masterID <> jeterT.masterID\
+  AND jeterT.masterID = jeterTY.masterID\
+  AND jeterTY.teamID = jeterTT.teamID\
+  AND jeterTY.yearID = jeterTT.yearID\
+  AND jeterTY.lgID = jeterTT.lgID\
+  AND jeterTY.masterID <> jeterTT.masterID\
+  AND jeterTT.masterID <> jeter.masterID\
+  AND jeter.teamID <> jeterTY.teamID\
+  AND jeterT.G_1b > 10\
+  AND jeterTY.G_2b > 10\
+  AND jeterTT.G_3b > 10;\
+  \
+  --query 10 \
+create index on teams(yearid,w,name);\
+\
+EXPLAIN ANALYZE SELECT name, yearId, W\
+FROM teams T\
+WHERE W = (SELECT MAX(W)\
+           FROM teams y\
+           WHERE t.yearID = y.yearID\
+          );}

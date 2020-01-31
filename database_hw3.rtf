@@ -1,0 +1,219 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red255\green255\blue255;}
+{\*\expandedcolortbl;;\csgenericrgb\c0\c0\c0;\csgenericrgb\c100000\c100000\c100000;}
+\margl1440\margr1440\vieww12100\viewh8700\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 1.\
+select distinct m.nameFirst as "First Name", m.nameLast as "Last Name"\
+from master as m,  (select a.masterID\
+from appearances as a join teams as t on (t.teamID = a.teamID) \
+where t.name = "Brooklyn Dodgers" and t.yearID = a.yearID) as p\
+where m.masterID = p.masterID\
+order by m.nameLast\
+\
+2.\
+select distinct m.nameFirst as "First Name", m.nameLast as "Last Name", f.yearID as "year",f.E as "Errors"\
+from master as m, fielding as f\
+where f.masterID = m.masterID and f.E >100\
+order by m.nameLast
+\f1\fs26 \cf2 \cb3 \
+\pard\tx642\pardeftab642\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \cb1 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 3.\
+\pard\tx642\pardeftab642\pardirnatural\partightenfactor0
+
+\f1\fs26 \cf2 \cb3 select distinct m.nameFirst as "First Name", m.nameLast as "Last Name"\
+from master as m, (select distinct masterID\
+from teams join appearances on (teams.teamID = appearances.teamID and appearances.G_1b>0 and teams.name like "%Braves%") ) as A\
+where m.masterID = A.masterID\
+order by m.nameLast
+\f0\fs24 \cf0 \cb1 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+4.\
+select distinct m.nameFirst as "First Name", m.nameLast as "Last Name"\
+from master as m, pitching as p, (select teamID from teams where teams.name like "Montreal Expos") as t\
+where p.masterID = m.masterID and p.teamID = t.teamID \
+order by m.nameLast\
+\
+\pard\tx642\pardeftab642\pardirnatural\partightenfactor0
+
+\f1\fs26 \cf2 \cb3 select distinct m.nameFirst as "First Name", m.nameLast as "Last Name"\
+from master as m, (select distinct masterID\
+from teams join appearances on (teams.teamID = appearances.teamID and appearances.G_p>0 and teams.name like "Montreal Expos") ) as A\
+where m.masterID = A.masterID\
+order by m.nameLast
+\f0\fs24 \cf0 \cb1 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+\cf0 \
+5.\
+select distinct t.name, count(*)\
+from teams as t\
+where t.WSWin = "Y"\
+group by t.name\
+order by count(*), t.name \
+\
+6.\
+select distinct name as "Team Name", sum(W)/(sum(W)+sum(L)) as "win percentage", sum(W) as "total wins", sum(L) as "total losses"\
+from teams \
+group by name\
+order by name\
+\
+7.\cb3 \
+\pard\tx642\pardeftab642\pardirnatural\partightenfactor0
+
+\f1\fs26 \cf2 select (sum(b.H)/sum(b.AB)) as "Average" ,  sum(b.H) as "Hits" , sum(b.AB) as "At Bats", m.nameFirst as "First Name", m.nameLast as "Last Name"\
+from batting as b, master as m\
+where m.birthState like "%UT%" and m.masterID = b.masterID and b.AB is not Null and b.AB > 0\
+group by b.masterID\
+\pard\tx642\pardeftab642\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+8.\
+\pard\tx642\pardeftab642\pardirnatural\partightenfactor0
+
+\f1\fs26 \cf2 With topten as (select  m.nameFirst as "First Name", m.nameLast as "Last Name", RANK ( ) over ( order by b.HR desc ) as ranking, b.HR as "hr"\
+from batting as b, master as m\
+where m.masterID = b.masterID)\
+select * from topten where ranking <= 10\
+ \
+9.\
+select m.nameFirst as "First Name", m.nameLast as "Last Name", b.yearID as "year", b.HR as "home runs"\
+from batting as b\
+join master as m on (b.masterID = m.masterID and b.teamID = "NYA")\
+join (select max(HR) as hr, yearID from batting group by yearID) as c on (c.yearID = b.yearID and c.hr = b.HR)\
+order by b.yearID \
+\
+10.\
+select m.nameFirst as "First Name", m.nameLast as "Last Name"\
+from master as m\
+where m.masterID not in (select masterID from teams as t\
+join batting as b on (b.teamID = t.teamID and b.yearID = t.yearID)where  t.name != "Brooklyn Dodgers")\
+and masterID in (\
+select masterID from teams join batting on (batting.teamID = teams.teamID and batting.yearID = teams.yearID)\
+where  teams.name = "Brooklyn Dodgers"\
+)\
+order by m.nameLast\
+\
+11.\
+select distinct currentYear.name, info.lgID, prYear.yearID, prYear.salarysumpr, currentYear.yearID, currentYear.salarysumcr, floor((currentYear.salarysumcr / prYear.salarysumpr) * 100)  as 'Percent Increase'\
+from salaries as info,\
+ (select teamID, yearID,sum(salary) as salarysumpr\
+from salaries\
+group by teamID, yearID) as prYear\
+join\
+(select s.salarysumcr, t.name, t.yearID,t.teamID\
+from teams as t,\
+(select teamID, yearID,sum(salary) as salarysumcr\
+from salaries\
+group by teamID, yearID) as s \
+where s.teamID = t.teamID and s.yearID = t.yearID) as currentYear\
+on (prYear.yearID + 1 = currentYear.yearID and prYear.teamID = currentYear.teamID)\
+where info.teamID =  currentYear.teamID\
+having (currentYear.salarysumcr / prYear.salarysumpr) * 100 >150\
+order by prYear.yearID\
+\
+12.\
+select distinct m.nameFirst as "First Name", m.nameLast as "Last Name"\
+from master as m,\
+(select p1.masterID, p1.yearID\
+from pitching as p1 join teams as t1 on (t1.teamID = p1.teamID) where t1.name = "Brooklyn Dodgers" and t1.yearID = p1.yearID) as n \
+join\
+(select p2.masterID, p2.yearID\
+from pitching as p2 join teams as t2 on (t2.teamID = p2.teamID) where t2.name = "Brooklyn Dodgers" and t2.yearID = p2.yearID) as c\
+join\
+(select p3.masterID, p3.yearID\
+from pitching as p3 join teams as t3 on (t3.teamID = p3.teamID) where t3.name = "Brooklyn Dodgers" and t3.yearID = p3.yearID) as p\
+on(c.yearID = p.yearID +1 and c.masterID = p.masterID and n.yearID = c.yearID +1 and n.masterID = c.masterID and p.masterID = n.masterID) \
+where m.masterID = c.masterID \
+\
+13.\
+select m.nameFirst as "First Name", m.nameLast as "Last Name", s.yearID as "Year", s.H as "Hits"\
+from master as m,\
+(With topthree as (select  RANK ( ) over ( PARTITION BY b.yearID order by b.H desc ) as ranking, b.H as "h", b.yearID, b.masterID\
+from batting as b\
+)\
+select * from topthree where ranking = 3) as s\
+where m.masterID = s.masterID\
+order by s.yearID\
+\
+14.\
+select distinct mm.nameFirst as "First Name", mm.nameLast as "Last Name"\
+from master as mm,\
+(select bb.masterID\
+from batting as bb,\
+(select ba.masterID, ba.yearID, ba.teamID\
+from batting as ba, master as ma,\
+(select b.masterID, b.yearID, b.teamID\
+from batting as b, master as m\
+where b.masterID = m.masterID and m.nameFirst = "Yogi" and m.nameLast = "Berra" ) as y\
+where y.yearID = ba.yearID and y.teamID = ba.teamID and ba.masterId != y.masterID ) as a\
+where bb.yearID = a.yearID and bb.teamID = a.teamID ) as playerB\
+join\
+(select ba.masterID, ba.yearID, ba.teamID\
+from batting as ba, master as ma,\
+(select b.masterID, b.yearID, b.teamID\
+from batting as b, master as m\
+where b.masterID = m.masterID and m.nameFirst = "Yogi" and m.nameLast = "Berra" ) as y\
+where y.yearID = ba.yearID and y.teamID = ba.teamID and ba.masterId != y.masterID ) as playerA\
+where mm.masterID = playerA.masterID and mm.masterID = playerB.masterID\
+\
+\
+select distinct mm.nameFirst as "First Name", mm.nameLast as "Last Name"\
+from master as mm,\
+(select ba.masterID, ba.yearID, ba.teamID \
+from batting as ba, master as ma,\
+(select b.masterID, b.yearID, b.teamID\
+from batting as b, master as m\
+where b.masterID = m.masterID and m.nameFirst = "Yogi" and m.nameLast = "Berra" ) as y\
+where y.yearID = ba.yearID and y.teamID = ba.teamID and ba.masterId != y.masterID ) as playerA \
+join\
+(select bb.masterID \
+from batting as bb, playerA\
+where bb.yearID = playerA.yearID and bb.teamID = playerA.teamID ) as playerB\
+where mm.masterID = playerA.masterID and mm.masterID = playerB.masterID\
+\
+15.\
+select distinct allteam.name\
+from \
+(select distinct b.teamID\
+from batting as b, master as m\
+where b.masterID = m.masterID and m.nameFirst = "Rickey" and m.nameLast = "Henderson") as rin\
+right join\
+(select distinct team.name, team.teamID\
+from teams as team\
+join\
+(select distinct t1.name, t1.yearID, t1.teamID\
+from teams as t1,\
+(select distinct b.teamID,b.yearID\
+from batting as b, master as m\
+where b.masterID = m.masterID and m.nameFirst = "Rickey" and m.nameLast = "Henderson") as r\
+where r.teamID = t1.teamID and r.yearID = t1.yearID\
+) as rickey\
+on (team.yearID = rickey.yearID and team.name != rickey.name and team.teamID != rickey.teamID)\
+order by team.name) as allteam\
+on(rin.teamID = allteam.teamID)\
+where rin.teamID is null\
+\
+16.\
+select i.name, floor(med.c)\
+from \
+(select count(*)/2 as c\
+from\
+(select t.name, sum(t.W) as w\
+from teams as t\
+where t.yearID >= 1970 and t.yearID <= 1979 and t.lgID = "NL"\
+group by t.name\
+order by sum(t.W)) as mytable) as med,\
+\
+(select t.name, sum(t.W) as w, row_number() OVER (order by sum(t.W)) as rownum\
+from teams as t\
+where t.yearID >= 1970 and t.yearID <= 1979 and t.lgID = "NL"\
+group by t.name\
+order by sum(t.W)) as i\
+where i.rownum = med.c\
+}

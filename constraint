@@ -1,0 +1,106 @@
+-- Constraint 1
+--The default birthState is "Utah".
+ALTER TABLE master 
+ALTER COLUMN birthstate SET DEFAULT 'UT';
+
+--Insertion/update/or delete to test the constraint
+INSERT INTO master VALUES('frankt12',1992,6,17,'USA',DEFAULT,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
+
+SELECT * 
+FROM master
+WHERE masterID = 'frankt12'
+	AND birthyear = 1992
+    AND birthmonth = 6
+    AND birthday = 17
+    AND birthcountry = 'USA';
+
+--Constraint 2
+--In the Teams table, the number of wins (W) and losses (L) must equal the number of games (G).
+ALTER TABLE teams 
+ADD CONSTRAINT W_L_EQUAL_G10 CHECK(teams.g = teams.w + teams.l) not valid;
+
+--https://dba.stackexchange.com/questions/127163/error-check-constraint-is-violated-by-some-row
+
+INSERT INTO teams (yearid,teamid,g,w,l) VALUES(1992,'AL2',20,5,15); -- works
+INSERT INTO teams (yearid,teamid,g,w,l) VALUES(1900,'AL2',10,5,15); -- does not work 
+
+-- Constraint 3
+--If a player wins the MVP, WS MVP, and a Gold Glove in the same season, 
+-- they are automatically inducted into the Hall of Fame.
+
+--find the person who should be in hall of fame
+SELECT p1.masterid,p1.yearid
+FROM awardsplayers AS p1, awardsplayers AS p2, awardsplayers AS p3
+WHERE p1.masterid = p2.masterid AND p2.masterid = p3.masterid
+	AND p1.yearid = p2.yearid AND p2.yearid = p3.yearid 
+	AND p1.awardid = 'Most Valuable Player' 
+	AND p2.awardid = 'World Series MVP'
+	AND p3.awardid = 'Gold Glove';
+		
+-- check whether schmimi01 is in halloffame table. If exist then delete.
+DELETE FROM halloffame
+WHERE masterid = 'qiqiqi';
+
+SELECT * 
+FROM halloffame
+WHERE masterid = 'qiqiqi' AND yearid = 1990;
+
+-- create trigger
+DROP TRIGGER IF EXISTS insert_player ON awardsplayers;
+CREATE TRIGGER insert_player
+AFTER INSERT ON awardsplayers
+FOR EACH STATEMENT
+EXECUTE PROCEDURE insert_player();
+
+CREATE OR REPLACE FUNCTION insert_player()
+RETURNS TRIGGER AS
+$$
+DECLARE 
+	row record;
+BEGIN 
+	FOR row IN (
+		SELECT p1.masterid,p1.yearid
+		FROM awardsplayers AS p1, awardsplayers AS p2, awardsplayers AS p3
+		WHERE p1.masterid = p2.masterid AND p2.masterid = p3.masterid
+			AND p1.yearid = p2.yearid AND p2.yearid = p3.yearid 
+			AND p1.awardid = 'Most Valuable Player' 
+			AND p2.awardid = 'World Series MVP'
+			AND p3.awardid = 'Gold Glove') LOOP
+			
+		IF NOT EXISTS (SELECT * 
+				   FROM halloffame 
+				   WHERE halloffame.masterid = row.masterid
+				  	AND halloffame.yearid = row.yearid) 
+		THEN INSERT INTO halloffame(masterid,yearid) VALUES(row.masterid,row.yearid);
+		END IF;
+		
+		END LOOP;
+		RETURN ROW;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+--insert into
+INSERT INTO awardsplayers VALUES ('qiqiqi', 'Most Valuable Player', 1990, 'AL', 'Y','');
+INSERT INTO awardsplayers VALUES ('qiqiqi', 'World Series MVP', 1990, 'AL', 'Y','');
+INSERT INTO awardsplayers VALUES ('qiqiqi', 'Gold Glove', 1990, 'AL', 'Y','');
+
+--whether exist in halloffame
+SELECT *
+FROM halloffame
+WHERE masterid ='qiqiqi' AND yearid = '1990';
+
+-- Constraint 4
+--All teams must have some name, i.e., it cannot be null.
+ALTER TABLE teams 
+ADD CONSTRAINT isunique CHECK(name <> null);
+
+INSERT INTO teams(name) VALUES('qi'); -- it wokrs
+INSERT INTO teams(name) VALUES(null); -- does not work. 
+
+-- Constraint 5
+--Everybody has a unique name (combined first and last names).
+ALTER TABLE master
+ADD UNIQUE(namefirst, namelast);
+
+
